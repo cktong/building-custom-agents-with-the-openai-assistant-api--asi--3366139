@@ -6,17 +6,20 @@ import requests
 
 # Load from data.gov.sg
 url = "https://api.data.gov.sg/v1/environment/rainfall"
+# url = "https://api.data.gov.sg/v1/environment/air-temperature"
+# url = "https://api.data.gov.sg/v1/environment/wind-speed"
 response = requests.get(url)
 
 if response.status_code == 200:
     data = response.json()
-    print("Data saved successfully.")
+    print("Data saved successfully")
+    print(data["items"][0]["timestamp"])
 else:
     print("Failed to fetch data:", response.status_code)
 
 # Test: Load data from JSON file
-# with open("weather_data.json", "r") as file:
-#     data = json.load(file)
+with open("weather_data.json", "r") as file:
+    data = json.load(file)
 
 # Extract station locations and rainfall values
 stations = data["metadata"]["stations"]
@@ -24,10 +27,11 @@ station_locations = np.array([(station["location"]["latitude"], station["locatio
 rainfall_values = np.array([reading["value"] for reading in data["items"][0]["readings"]])
 
 # Find northernmost, southernmost, westernmost, and easternmost stations
-north = np.max(station_locations[:, 0])
-south = np.min(station_locations[:, 0])
-west = np.min(station_locations[:, 1])
-east = np.max(station_locations[:, 1])
+buffer = .1
+north = np.max(station_locations[:, 0])+ buffer
+south = np.min(station_locations[:, 0])- buffer
+east = np.max(station_locations[:, 1])+ buffer
+west = np.min(station_locations[:, 1])- buffer
 
 # Create a grid covering the area defined by the outermost stations
 grid_lat = np.linspace(south, north, 100)  # Define latitude range

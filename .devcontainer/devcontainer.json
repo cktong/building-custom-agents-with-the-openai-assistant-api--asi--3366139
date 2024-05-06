@@ -6,7 +6,7 @@
     "dockerfile": "Dockerfile"
   },
   "onCreateCommand": "echo PS1='\"$ \"' >> ~/.bashrc",
-  "postCreateCommand": "npm install && pip install openai python-dotenv",
+  "postCreateCommand": "npm install && pip install openai python-dotenv numpy matplotlib requests",
   "forwardPorts": [
     3000
   ],
