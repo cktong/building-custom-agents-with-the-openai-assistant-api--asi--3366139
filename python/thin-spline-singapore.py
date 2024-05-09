@@ -2,6 +2,7 @@ import json
 import numpy as np
 from tps import ThinPlateSpline
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import requests
 
 # Load from data.gov.sg
@@ -18,8 +19,8 @@ else:
     print("Failed to fetch data:", response.status_code)
 
 # Test: Load data from JSON file
-with open("weather_data.json", "r") as file:
-    data = json.load(file)
+# with open("weather_data.json", "r") as file:
+#     data = json.load(file)
 
 # Extract station locations and rainfall values
 stations = data["metadata"]["stations"]
@@ -50,7 +51,7 @@ estimated_grid_transposed = estimated_rainfall.reshape(len(grid_lat), len(grid_l
 estimated_rainfall_grid = np.flip(estimated_grid_transposed, axis=0)
 
 # Clip negative values
-estimated_rainfall_grid[estimated_rainfall_grid < 0] = 0
+estimated_rainfall_grid[estimated_rainfall_grid < 0] = 0.01
 
 # Load Singapore boundary from GeoJSON file
 with open("singapore_boundary.geojson", "r") as file:
@@ -61,6 +62,7 @@ boundary_coordinates = np.array(singapore_boundary_data["geometry"]["coordinates
 # Plot rain map
 plt.figure(figsize=(10, 8))
 plt.imshow(estimated_rainfall_grid, extent=[grid_lon.min(), grid_lon.max(), grid_lat.min(), grid_lat.max()])
+# plt.imshow(estimated_rainfall_grid, extent=[grid_lon.min(), grid_lon.max(), grid_lat.min(), grid_lat.max()], norm=colors.LogNorm(vmin=0.01, vmax=5))
 plt.plot(boundary_coordinates[:, 0], boundary_coordinates[:, 1], color='red', linewidth=2)  # Plot Singapore boundary
 plt.colorbar(label='Estimated Rainfall (mm)')
 plt.xlabel('Longitude')

@@ -1,11 +1,11 @@
 {
-  "type": "feature",
+  "type": "Feature",
   "id": "SGP",
   "properties": {
     "name": "Singapore"
   },
   "geometry": {
-    "type": "",
+    "type": "Polygon",
     "coordinates": [
       [
         [
