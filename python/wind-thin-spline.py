@@ -6,8 +6,7 @@ import matplotlib.colors as colors
 import requests
 
 # Load from data.gov.sg
-url = "https://api.data.gov.sg/v1/environment/rainfall"
-# url = "https://api.data.gov.sg/v1/environment/air-temperature"
+
 # url = "https://api.data.gov.sg/v1/environment/wind-speed"
 response = requests.get(url)
 
@@ -75,42 +74,15 @@ plt.scatter(station_locations[:, 1], station_locations[:, 0], color='red', marke
 plt.show()
 plt.savefig('singapore_rain.png')
 
-# output_data = []
-# output_data.append()
-# for i in range(len(grid_lat)):
-#     for j in range(len(grid_lon)):
-#         output_data.append({
-#             "latitude": grid_lat[i],
-#             "longitude": grid_lon[j],
-#             "estimated_rainfall": estimated_rainfall_grid[i][j]
-#         })
-
-# # Convert estimated rainfall grid to GeoJSON format
-# # Save estimated rainfall grid to JSON file
-# with open("outputs/estimated_rainfall.json", "w") as outfile:
-#     json.dump(output_data, outfile, indent=4)
-
-geojson_data = {
-    "type": "FeatureCollection",
-    "features": []
-}
-
+output_data = []
 for i in range(len(grid_lat)):
     for j in range(len(grid_lon)):
-        feature = {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [grid_lon[j], grid_lat[i]]  # Note the order of coordinates (lon, lat)
-            },
-            "properties": {
-                "estimated_rainfall": estimated_rainfall_grid[i][j]
-            }
-        }
-        geojson_data["features"].append(feature)
+        output_data.append({
+            "latitude": grid_lat[i],
+            "longitude": grid_lon[j],
+            "estimated_rainfall": estimated_rainfall_grid[i][j]
+        })
 
-# Save estimated rainfall grid to GeoJSON file
-with open("outputs/estimated_rainfall.geojson", "w") as outfile:
-    json.dump(geojson_data, outfile, indent=4)
-
-
+# Save estimated rainfall grid to JSON file
+with open("outputs/estimated_rainfall.json", "w") as outfile:
+    json.dump(output_data, outfile, indent=4)
