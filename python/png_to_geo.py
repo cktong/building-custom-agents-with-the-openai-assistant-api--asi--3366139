@@ -27,8 +27,9 @@ min_lon, max_lon = 103.5, 104.5
 # Define mapping between pixel values and rainfall magnitude
 # You'll need to define this mapping based on your data
 rainfall_magnitude_mapping = {
-    0: 0,  # Example: pixel value of 0 corresponds to rainfall magnitude of 0
-    255: 10  # Example: pixel value of 255 corresponds to rainfall magnitude of 10
+    (255, 0, 0, 255): 10,   # Example mapping: red color corresponds to rainfall magnitude of 10
+    (0, 255, 0, 255): 5,    # Example mapping: green color corresponds to rainfall magnitude of 5
+    # Add more mappings as needed
 }
 
 # Convert pixel coordinates to geographical coordinates
@@ -39,10 +40,14 @@ longitudes = np.linspace(min_lon, max_lon, num_cols)
 
 # Generate GeoJSON data
 features = []
+magnitude_sum = 0
 for i in range(num_rows):
     for j in range(num_cols):
         pixel_value = image_array[i, j]
-        magnitude = rainfall_magnitude_mapping.get(tuple(pixel_value), 0)  # Convert array to tuple
+        magnitude = rainfall_magnitude_mapping.get(tuple(pixel_value[:3]), 0)  # Consider only RGB values
+        if sum(tuple(pixel_value[:3])) > 0:
+           print(sum(pixel_value[:3]))
+        magnitude_sum = magnitude_sum + magnitude
         latitude = latitudes[i]
         longitude = longitudes[j]
         feature = {
@@ -57,6 +62,7 @@ for i in range(num_rows):
         }
         features.append(feature)
 
+print(magnitude_sum)
 # Create GeoJSON structure
 geojson_data = {
     "type": "FeatureCollection",
