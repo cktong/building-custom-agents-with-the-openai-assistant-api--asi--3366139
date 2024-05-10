@@ -24,13 +24,23 @@ image_array = np.array(image)
 min_lat, max_lat = 1.5, 0.5
 min_lon, max_lon = 103.5, 104.5
 
-# Define mapping between pixel values and rainfall magnitude
-# You'll need to define this mapping based on your data
-rainfall_magnitude_mapping = {
-    (255, 0, 0, 255): 10,   # Example mapping: red color corresponds to rainfall magnitude of 10
-    (0, 255, 0, 255): 5,    # Example mapping: green color corresponds to rainfall magnitude of 5
-    # Add more mappings as needed
-}
+# Load the extracted colors from the JSON file
+with open("extracted_colors.json", "r") as file:
+    extracted_colors = json.load(file)
+
+# Define a mapping from pixel values to rainfall magnitudes using the extracted colors
+rainfall_magnitude_mapping = {}
+
+# Assign magnitudes to colors based on their order in the extracted colors list
+for i, color in enumerate(extracted_colors):
+    # Define a magnitude range for each color
+    # For simplicity, we'll use a range of (0, 5), (5, 10), (10, 15), and so on
+    magnitude_range = (i * 5, (i + 1) * 5)
+    # Add the color and its corresponding magnitude range to the mapping
+    rainfall_magnitude_mapping[tuple(color)] = magnitude_range
+
+print(rainfall_magnitude_mapping)
+# Now, rainfall_magnitude_mapping contains the mapping from colors to rainfall magnitudes
 
 # Convert pixel coordinates to geographical coordinates
 # Assuming the image covers the entire geographical extent
@@ -40,14 +50,13 @@ longitudes = np.linspace(min_lon, max_lon, num_cols)
 
 # Generate GeoJSON data
 features = []
-magnitude_sum = 0
 for i in range(num_rows):
     for j in range(num_cols):
         pixel_value = image_array[i, j]
         magnitude = rainfall_magnitude_mapping.get(tuple(pixel_value[:3]), 0)  # Consider only RGB values
         if sum(tuple(pixel_value[:3])) > 0:
            print(sum(pixel_value[:3]))
-        magnitude_sum = magnitude_sum + magnitude
+        # magnitude_sum = magnitude_sum + magnitude 
         latitude = latitudes[i]
         longitude = longitudes[j]
         feature = {
@@ -62,7 +71,6 @@ for i in range(num_rows):
         }
         features.append(feature)
 
-print(magnitude_sum)
 # Create GeoJSON structure
 geojson_data = {
     "type": "FeatureCollection",
