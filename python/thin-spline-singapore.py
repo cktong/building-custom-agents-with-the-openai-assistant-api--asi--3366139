@@ -19,8 +19,8 @@ else:
     print("Failed to fetch data:", response.status_code)
 
 # Test: Load data from JSON file
-# with open("weather_data.json", "r") as file:
-#     data = json.load(file)
+with open("weather_data.json", "r") as file:
+    data = json.load(file)
 
 # Extract station locations and rainfall values
 stations = data["metadata"]["stations"]
