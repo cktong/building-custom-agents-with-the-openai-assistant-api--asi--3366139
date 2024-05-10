@@ -21,7 +21,7 @@ image_array = np.array(image)
 
 # Define geographical extent (latitude and longitude ranges)
 # You'll need to replace these with the actual coordinates
-min_lat, max_lat = 1.5, 2.5
+min_lat, max_lat = 1.5, 0.5
 min_lon, max_lon = 103.5, 104.5
 
 # Define mapping between pixel values and rainfall magnitude
