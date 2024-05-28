@@ -40,15 +40,15 @@ print("Colors extracted from middle row pixels:", colors_list)
 # Plot the colors
 plt.figure(figsize=(8, 1))
 plt.imshow([colors_list], aspect='auto')
-plt.title('Extracted Colors')
+# plt.title('Extracted Colors')
 plt.xlabel('Pixel Index')
 plt.yticks([])
 plt.show()
 plt.savefig('color_magnitude.png')
 
 # Convert the numpy array to a standard Python list
-colors_list = middle_row_pixels_flat.tolist()
+colors_list_np = np.array(colors_list).tolist()
 
-# Save the colors to a JSON file
+# # Save the colors to a JSON file
 with open('extracted_colors.json', 'w') as file:
-    json.dump(colors_list, file)
+    json.dump(colors_list_np, file)
