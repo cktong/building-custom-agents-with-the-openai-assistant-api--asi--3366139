@@ -19,87 +19,95 @@ class AutoColormap:
         # Return the corresponding magnitude, starting from 1
         return idx + 1
 
-# Load extracted RGB colors from JSON file
-with open("extracted_colors.json", "r") as file:
-    extracted_colors = json.load(file)
-extracted_colors.reverse()  # Reverse the colors if needed
+class RainfallAnalyzer:
+    def __init__(self, color_file):
+        self.extracted_colors = self.load_colors(color_file)
+        self.auto_cmap = AutoColormap(self.extracted_colors)
+        self.cmap = ListedColormap(np.array(self.extracted_colors) / 255.0)
+        self.min_lat, self.max_lat = 1.47, 1.14
+        self.min_lon, self.max_lon = 103.55, 104.1
 
-# Convert RGB array to Matplotlib colormap
-cmap = ListedColormap(np.array(extracted_colors) / 255.0)
+    def load_colors(self, color_file):
+        with open(color_file, "r") as file:
+            extracted_colors = json.load(file)
+        extracted_colors.reverse()
+        return extracted_colors
 
-month= "05"
-day= "27"
-year= "2024"
-time= "1400"
-# Fetch the rain data image from the URL
-# url = "http://www.weather.gov.sg/files/rainarea/50km/v2/dpsri_70km_2024052514000000dBR.dpsri.png"
-url = "http://www.weather.gov.sg/files/rainarea/50km/v2/dpsri_70km_"+year+month+day+time+"0000dBR.dpsri.png"
-response = requests.get(url)
-if response.status_code == 200:
-    image_bytes = response.content
-else:
-    raise Exception(f"Failed to fetch data: {response.status_code}")
-
-# Convert the image bytes to a PIL Image object
-image = Image.open(io.BytesIO(image_bytes))
-
-# Convert image to numpy array
-rain_data = np.array(image)
-
-# Define geographic boundaries and resolution
-min_lat, max_lat = 1.47, 1.14
-min_lon, max_lon = 103.55, 104.1
-num_rows, num_cols = rain_data.shape[:2]
-
-# Generate latitude and longitude arrays
-latitudes = np.linspace(min_lat, max_lat, num_rows)
-longitudes = np.linspace(min_lon, max_lon, num_cols)
-
-# Initialize a list to hold GeoJSON features
-features = []
-
-# Initialize AutoColormap instance
-auto_cmap = AutoColormap(extracted_colors)
-
-# Initialize an array to hold magnitudes
-magnitude = np.empty([rain_data.shape[0], rain_data.shape[1]])
-
-# Iterate over each pixel in the rain data and map RGB values to rain magnitudes
-for i in range(num_rows):
-    for j in range(num_cols):
-        rgb_value = rain_data[i, j][:3]
-        if sum(rgb_value) == 0:
-            magnitude[i, j] = np.NaN
+    def fetch_image(self, url):
+        response = requests.get(url)
+        if response.status_code == 200:
+            image_bytes = response.content
+            return Image.open(io.BytesIO(image_bytes))
         else:
-            magnitude[i, j] = auto_cmap.to_magnitude(rgb_value)
-            feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [longitudes[j], latitudes[i]]  # Note: GeoJSON coordinates are (lon, lat)
-                },
-                "properties": {
-                    "magnitude": magnitude[i, j]
-                }
-            }
-            features.append(feature)
+            raise Exception(f"Failed to fetch data: {response.status_code}")
 
-# Create GeoJSON structure
-geojson_data = {
-    "type": "FeatureCollection",
-    "features": features
-}
+    def analyze_rainfall(self, image):
+        rain_data = np.array(image)
+        num_rows, num_cols = rain_data.shape[:2]
+        latitudes = np.linspace(self.min_lat, self.max_lat, num_rows)
+        longitudes = np.linspace(self.min_lon, self.max_lon, num_cols)
+        magnitude = np.empty([num_rows, num_cols])
+        features = []
 
-# Save GeoJSON to file
-output_file = "outputs/rainfall_magnitude_"+year+month+day+time+".geojson"
-with open(output_file, "w") as f:
-    json.dump(geojson_data, f, indent=2)
-print("GeoJSON file saved:", output_file)
+        for i in range(num_rows):
+            for j in range(num_cols):
+                rgb_value = rain_data[i, j][:3]
+                if sum(rgb_value) == 0:
+                    magnitude[i, j] = np.NaN
+                else:
+                    magnitude[i, j] = self.auto_cmap.to_magnitude(rgb_value)
+                    feature = {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [longitudes[j], latitudes[i]]
+                        },
+                        "properties": {
+                            "magnitude": magnitude[i, j]
+                        }
+                    }
+                    features.append(feature)
+        
+        return magnitude, features
 
-# Plot the colormap and display the scalar values on the colorbar
-plt.figure(figsize=(10, 8))
-plt.imshow(magnitude, cmap=cmap, aspect='auto')
-plt.colorbar(label='Rain Magnitude')
-plt.title('Rain Levels '+year+'/'+month+'/'+day+' Time:'+time)
-plt.show()
-plt.savefig('outputs/rain_magnitude_plot_'+year+month+day+time+'.png')
+    def save_geojson(self, features, output_file):
+        geojson_data = {
+            "type": "FeatureCollection",
+            "features": features
+        }
+        with open(output_file, "w") as f:
+            json.dump(geojson_data, f, indent=2)
+        print("GeoJSON file saved:", output_file)
+
+    def plot_magnitude(self, magnitude, output_file, title):
+        plt.figure(figsize=(10, 6))
+        plt.imshow(magnitude, cmap=self.cmap, aspect='auto')
+        plt.colorbar(label='Rain Magnitude')
+        plt.title(title)
+        plt.show()
+        plt.savefig(output_file)
+        print("Plot saved:", output_file)
+
+def main():
+    color_file = "extracted_colors.json"
+    month, day, year, time = "05", "27", "2024", "1400"
+    
+    rainfall_analyzer = RainfallAnalyzer(color_file)
+    
+    # Construct the URL for the image
+    url = f"http://www.weather.gov.sg/files/rainarea/50km/v2/dpsri_70km_{year}{month}{day}{time}0000dBR.dpsri.png"
+    image = rainfall_analyzer.fetch_image(url)
+    
+    # Analyze rainfall
+    magnitude, features = rainfall_analyzer.analyze_rainfall(image)
+    
+    # Save results
+    geojson_output_file = f"outputs/rainfall_magnitude_{year}{month}{day}{time}.geojson"
+    rainfall_analyzer.save_geojson(features, geojson_output_file)
+    
+    plot_output_file = f"outputs/rain_magnitude_plot_{year}{month}{day}{time}.png"
+    title = f'Rain Levels {year}/{month}/{day} Time: {time}'
+    rainfall_analyzer.plot_magnitude(magnitude, plot_output_file, title)
+
+if __name__ == "__main__":
+    main()
