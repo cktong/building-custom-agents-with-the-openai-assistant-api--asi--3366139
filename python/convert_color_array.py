@@ -97,9 +97,9 @@ with open(output_file, "w") as f:
 print("GeoJSON file saved:", output_file)
 
 # Plot the colormap and display the scalar values on the colorbar
-plt.figure(figsize=(8, 6))
+plt.figure(figsize=(10, 8))
 plt.imshow(magnitude, cmap=cmap, aspect='auto')
 plt.colorbar(label='Rain Magnitude')
-plt.title('Rain Levels')
+plt.title('Rain Levels '+year+'/'+month+'/'+day+' Time:'+time)
 plt.show()
-plt.savefig('rain_magnitude_plot.png')
+plt.savefig('outputs/rain_magnitude_plot_'+year+month+day+time+'.png')
