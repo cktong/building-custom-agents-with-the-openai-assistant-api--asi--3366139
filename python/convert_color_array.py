@@ -37,29 +37,61 @@ image_b = np.array(image_bytes)
 image = Image.open(io.BytesIO(image_bytes))
 # Convert image to numpy array
 rain_data = np.array(image)
-# print(rain_data[1,1])
+
+min_lat, max_lat = 1.47, 1.14
+min_lon, max_lon = 103.55, 104.1
+num_rows, num_cols = rain_data.shape[:2]
+# print(num_rows,num_cols) (120,217)
+# print(rain_data.shape[0],rain_data.shape[1])
+print(range(rain_data.shape[0]))
+latitudes = np.linspace(min_lat, max_lat, num_rows)
+longitudes = np.linspace(min_lon, max_lon, num_cols)
+print(f"lat range:", latitudes.shape[0])
+print("long range:", longitudes.shape[0])
+
+features = []
+geojson_data = {
+    "type": "FeatureCollection",
+    "features": []
+}
+
 # Map rain data to colormap
-
-# # Create a ScalarMappable object with the colormap and normalization
-# sm = ScalarMappable(cmap=cmap, norm=Normalize(vmin=0, vmax=len(extracted_colors) - 1))
-
-# # Get the scalar values corresponding to each color in the colormap
-# rain_values = np.linspace(0, len(extracted_colors) - 1, len(extracted_colors))
-
 auto_cmap = AutoColormap(extracted_colors)
 magnitude = np.empty([rain_data.shape[0],rain_data.shape[1]])
 # Iterate over each pixel in the rain data and map RGB values to rain values
-for i in range(rain_data.shape[0]):
-  for j in range(rain_data.shape[1]):
+for i in range(num_rows):
+  for j in range(num_cols):
       rgb_value = rain_data[i, j][0:3]
+      print(i,j)
       if sum(rgb_value) == 0:
           magnitude[i,j] = np.NaN
       else:
           magnitude[i,j] = auto_cmap.to_magnitude(rgb_value)
-        #   print(f"Pixel ({i}, {j}): RGB: {rgb_value}, Rain Value: {magnitude}")
+        #   print(f"Pixel ({i}, {j}): RGB: {rgb_value}, Rain Value: {magnitude[i,j]}")
+          feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [longitudes[j], latitudes[i]]  # Note: GeoJSON coordinates are (lon, lat)
+                },
+                "properties": {
+                    "magnitude": magnitude[i,j]
+                }
+            }
+          features.append(feature)
+        #   print(feature)
 
 
-      
+# Create GeoJSON structure
+geojson_data = {
+    "type": "FeatureCollection",
+    "features": features
+}
+# Save GeoJSON to file
+output_file = "rainfall_magnitude.geojson"
+with open(output_file, "w") as f:
+    json.dump(geojson_data, f, indent=2)
+print("GeoJSON file saved:", output_file)
 
 # Plot the colormap and display the scalar values on the colorbar
 plt.figure(figsize=(8, 6))
