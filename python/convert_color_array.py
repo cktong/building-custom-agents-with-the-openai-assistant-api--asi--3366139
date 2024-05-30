@@ -5,6 +5,9 @@ import requests
 import io
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+import h5py
+import os
+from datetime import datetime
 
 # Define a class to map RGB colors to magnitudes automatically
 class AutoColormap:
@@ -47,7 +50,6 @@ class RainfallAnalyzer:
         latitudes = np.linspace(self.min_lat, self.max_lat, num_rows)
         longitudes = np.linspace(self.min_lon, self.max_lon, num_cols)
         magnitude = np.empty([num_rows, num_cols])
-        features = []
 
         for i in range(num_rows):
             for j in range(num_cols):
@@ -56,6 +58,16 @@ class RainfallAnalyzer:
                     magnitude[i, j] = np.NaN
                 else:
                     magnitude[i, j] = self.auto_cmap.to_magnitude(rgb_value)
+        
+        return magnitude, latitudes, longitudes
+
+    def save_geojson(self, magnitudes, latitudes, longitudes, output_file):
+        features = []
+        num_rows, num_cols = magnitudes.shape
+
+        for i in range(num_rows):
+            for j in range(num_cols):
+                if not np.isnan(magnitudes[i, j]):
                     feature = {
                         "type": "Feature",
                         "geometry": {
@@ -63,24 +75,22 @@ class RainfallAnalyzer:
                             "coordinates": [longitudes[j], latitudes[i]]
                         },
                         "properties": {
-                            "magnitude": magnitude[i, j]
+                            "magnitude": magnitudes[i, j]
                         }
                     }
                     features.append(feature)
-        
-        return magnitude, features
 
-    def save_geojson(self, features, output_file):
         geojson_data = {
             "type": "FeatureCollection",
             "features": features
         }
+        
         with open(output_file, "w") as f:
             json.dump(geojson_data, f, indent=2)
         print("GeoJSON file saved:", output_file)
 
     def plot_magnitude(self, magnitude, output_file, title):
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 8))
         plt.imshow(magnitude, cmap=self.cmap, aspect='auto')
         plt.colorbar(label='Rain Magnitude')
         plt.title(title)
@@ -88,9 +98,29 @@ class RainfallAnalyzer:
         plt.savefig(output_file)
         print("Plot saved:", output_file)
 
+    def save_hdf5(self, magnitudes, latitudes, longitudes, datetime_str, output_file):
+        if not os.path.exists(output_file):
+            with h5py.File(output_file, 'w') as hf:
+                hf.create_dataset('magnitudes', data=magnitudes[np.newaxis, ...], maxshape=(None, magnitudes.shape[0], magnitudes.shape[1]))
+                hf.create_dataset('latitudes', data=latitudes)
+                hf.create_dataset('longitudes', data=longitudes)
+                hf.create_dataset('datetimes', data=np.array([datetime_str], dtype='S'))
+        else:
+            with h5py.File(output_file, 'a') as hf:
+                magnitudes_ds = hf['magnitudes']
+                magnitudes_ds.resize((magnitudes_ds.shape[0] + 1, magnitudes_ds.shape[1], magnitudes_ds.shape[2]))
+                magnitudes_ds[-1] = magnitudes
+
+                datetimes_ds = hf['datetimes']
+                datetimes_ds.resize((datetimes_ds.shape[0] + 1,))
+                datetimes_ds[-1] = np.string_(datetime_str)
+
+        print("HDF5 file saved/appended:", output_file)
+
 def main():
     color_file = "extracted_colors.json"
     month, day, year, time = "05", "27", "2024", "1400"
+    datetime_str = f"{year}-{month}-{day}T{time[:2]}:{time[2:]}:00"
     
     rainfall_analyzer = RainfallAnalyzer(color_file)
     
@@ -99,15 +129,20 @@ def main():
     image = rainfall_analyzer.fetch_image(url)
     
     # Analyze rainfall
-    magnitude, features = rainfall_analyzer.analyze_rainfall(image)
+    magnitude, latitudes, longitudes = rainfall_analyzer.analyze_rainfall(image)
     
-    # Save results
+    # Save GeoJSON
     geojson_output_file = f"outputs/rainfall_magnitude_{year}{month}{day}{time}.geojson"
-    rainfall_analyzer.save_geojson(features, geojson_output_file)
+    rainfall_analyzer.save_geojson(magnitude, latitudes, longitudes, geojson_output_file)
     
+    # Plot magnitude
     plot_output_file = f"outputs/rain_magnitude_plot_{year}{month}{day}{time}.png"
     title = f'Rain Levels {year}/{month}/{day} Time: {time}'
     rainfall_analyzer.plot_magnitude(magnitude, plot_output_file, title)
+
+    # Save HDF5 file and append new data
+    hdf5_output_file = "outputs/rainfall_magnitudes.h5"
+    rainfall_analyzer.save_hdf5(magnitude, latitudes, longitudes, datetime_str, hdf5_output_file)
 
 if __name__ == "__main__":
     main()
